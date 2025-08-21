@@ -7,12 +7,12 @@ namespace TestScalpingBackend.Models
     {
         public Guid Id { get; set; }
         public double ProfitOut { get; set; }
-        public double Profit { get; set; }
+        // public double Profit { get; set; }
         public ulong PositionID { get; set; }
         public ulong Login { get; set; }
         public string Symbol { get; set; }
-        public DateTimeOffset OpeningTime { get; set; }
-        public DateTimeOffset ClosingTime { get; set; }
+        public DateTime OpeningTime { get; set; }
+        public DateTime ClosingTime { get; set; }
         public ulong DealId { get; set; }
         public uint Entry { get; set; }
         public uint Action { get; set; }
@@ -67,7 +67,7 @@ namespace TestScalpingBackend.Models
         public string Symbol { get; set; }
         public ulong EntryType { get; set; }
         public ulong ActionType { get; set; }
-        public DateTimeOffset Time { get; set; }
+        public DateTime Time { get; set; }
     }
 
 

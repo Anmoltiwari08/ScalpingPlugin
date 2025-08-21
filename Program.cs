@@ -1,6 +1,7 @@
 using TestScalpingBackend.Services;
 using Microsoft.EntityFrameworkCore;
-      
+using DictionaryExample;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -14,8 +15,11 @@ builder.Services.AddSignalR();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddSingleton<MT5Connection>();
+builder.Services.AddSingleton<SymbolStore>();
 builder.Services.AddSingleton<DealSubscribe>();
 builder.Services.AddScoped<MT5Operations>();
+builder.Services.AddScoped<ScalpingDeduction>();
 
 builder.Services.AddCors(options =>
 {
@@ -54,7 +58,14 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-app.Services.GetRequiredService<DealSubscribe>();
+var MT5Connection = app.Services.GetRequiredService<MT5Connection>();
+app.Services.GetRequiredService<SymbolStore>();
+app.Services.GetRequiredService<ScalpingDeduction>();
+var dealSubscribe = app.Services.GetRequiredService<DealSubscribe>();
+MT5Connection.m_manager.DealSubscribe(dealSubscribe);
+
+
+
 app.MapHub<ProfitOutDealHub>("/profitoutdealhub");
 
 app.UseAuthorization();

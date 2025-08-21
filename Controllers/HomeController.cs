@@ -3,6 +3,7 @@ using TestScalpingBackend.Services;
 using MetaQuotes.MT5ManagerAPI;
 using TestScalpingBackend.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace TestScalpingBackend.Controllers
 {
@@ -10,43 +11,47 @@ namespace TestScalpingBackend.Controllers
     [Route("/api/v1/[controller]")]
     public class HomeController : ControllerBase
     {
-
+        private readonly ILogger<HomeController> _logger;
         private readonly DealSubscribe _dealSubscribe;
         private readonly MT5Operations mT5Operations;
         private readonly CIMTManagerAPI m_manager;
         private readonly AppDbContext _context;
 
-        public HomeController(MT5Connection mt5Connection, AppDbContext context)
+        public HomeController(MT5Connection mt5Connection, DealSubscribe dealSubscribe, AppDbContext context, MT5Operations mT5Operations, ILogger<HomeController> logger)
         {
-            // _dealSubscribe = dealSubscribe;
+            _logger = logger;
+            _dealSubscribe = dealSubscribe;
             // this.mT5Operations = new MT5Operations(dealSubscribe.m_manager);
+            this.mT5Operations = mT5Operations;
             m_manager = mt5Connection.m_manager;
             _context = context;
-
         }
 
         [HttpGet("toggle-creditprofit")]
         public IActionResult ToggleCreditProfit()
         {
+            _logger.LogInformation("Toggle credit profit request received");
             _dealSubscribe.CreditProfit = !_dealSubscribe.CreditProfit;
-            Console.WriteLine(_dealSubscribe.CreditProfit);
+            _logger.LogInformation($"Credit profit set to {_dealSubscribe.CreditProfit}");
             return Ok(new { CreditProfit = _dealSubscribe.CreditProfit });
         }
 
         [HttpGet("current-creditProfit")]
         public IActionResult CurrentProfitCredit()
         {
+            _logger.LogInformation("Current credit profit request received");
             return Ok(new { CreditProfit = _dealSubscribe.CreditProfit });
         }
-           
+
         [HttpPost("ClosedDealsWithRemovedProfit")]
         public async Task<IActionResult> GetClosedPositionsWithRemovedProfit([FromBody] RequestModel requestModel)
         {
-            // Console.WriteLine("GetClosedPositionsWithRemovedProfit");
+            _logger.LogInformation("Get closed positions with removed profit request received");
+            _logger.LogInformation($"Request model: {requestModel}");
 
             if (!ModelState.IsValid)
             {
-                Console.WriteLine("Request Model is invalid ");
+                _logger.LogError("Request model is invalid");
                 return BadRequest(ModelState);
             }
 
@@ -66,7 +71,9 @@ namespace TestScalpingBackend.Controllers
                 .Skip((requestModel.page - 1) * requestModel.pageSize)
                 .Take(requestModel.pageSize)
                 .ToListAsync();
- 
+
+            _logger.LogInformation($"Returning {pagedDeals.Count} deals");
+
             return Ok(new
             {
                 Deals = pagedDeals,
@@ -78,19 +85,21 @@ namespace TestScalpingBackend.Controllers
                     TotalPages = totalPages
                 }
             });
-
         }
-         
+
         private IQueryable<ProfitOutDeals> ApplySearchFilter(IQueryable<ProfitOutDeals> query, string column, string term)
         {
-            if (string.IsNullOrWhiteSpace(column) || string.IsNullOrWhiteSpace(term) )
+            if (string.IsNullOrWhiteSpace(column) || string.IsNullOrWhiteSpace(term))
+            {
+                _logger.LogInformation("No search filter applied");
                 return query;
+            }
 
             term = term.ToLower();
 
             switch (column.ToLower())
             {
-                case "profit": return query.Where(d => d.Profit.ToString().Contains(term));
+                // case "profit": return query.Where(d => d.Profit.ToString().Contains(term));
                 case "dealid": return query.Where(d => d.DealId.ToString().Contains(term));
                 case "symbol": return query.Where(d => d.Symbol.ToLower().Contains(term));
                 case "entry": return query.Where(d => d.Entry.ToString().Contains(term));
@@ -100,17 +109,19 @@ namespace TestScalpingBackend.Controllers
                 case "volume": return query.Where(d => d.Volume.ToString().Contains(term));
                 case "profitout": return query.Where(d => d.ProfitOut.ToString().Contains(term));
                 case "comment": return query.Where(d => d.Comment.ToLower().Contains(term));
-                default: return query;
+                default:
+                    _logger.LogInformation("No search filter applied");
+                    return query;
             }
         }
-        
+
         private IQueryable<ProfitOutDeals> ApplySorting(IQueryable<ProfitOutDeals> query, string sortBy, string direction)
         {
             bool descending = direction?.ToLower() == "desc";
 
             return sortBy?.ToLower() switch
             {
-                "profit" => descending ? query.OrderByDescending(d => d.Profit) : query.OrderBy(d => d.Profit),
+                // "profit" => descending ? query.OrderByDescending(d => d.Profit) : query.OrderBy(d => d.Profit),
                 "dealid" => descending ? query.OrderByDescending(d => d.DealId) : query.OrderBy(d => d.DealId),
                 "symbol" => descending ? query.OrderByDescending(d => d.Symbol) : query.OrderBy(d => d.Symbol),
                 "closingtime" => descending ? query.OrderByDescending(d => d.ClosingTime) : query.OrderBy(d => d.ClosingTime),
@@ -125,11 +136,5 @@ namespace TestScalpingBackend.Controllers
                 _ => query
             };
         }
-
- 
-
     }
-
 }
-
-

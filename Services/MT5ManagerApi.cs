@@ -9,9 +9,9 @@ namespace TestScalpingBackend.Services
 
         public CIMTManagerAPI m_manager = null!;
 
-        public MT5Operations(CIMTManagerAPI m_manager)
+        public MT5Operations(MT5Connection m_manager)
         {
-            this.m_manager = m_manager;
+            this.m_manager = m_manager.m_manager;
         }
 
         public MTRetCode GetDealsWithLoginAndSymbol(ulong[] login, long from, long to, out CIMTDealArray deals)
@@ -80,10 +80,18 @@ namespace TestScalpingBackend.Services
         public CIMTDeal GetDealByID(ulong DealID)
         {
             CIMTDeal deal = m_manager.DealCreate();
-            var response = m_manager.DealRequest(DealID,  deal);
+            var response = m_manager.DealRequest(DealID, deal);
             return deal;
 
         }
+
+        public CIMTOrder GetOrderByID(ulong DealID)
+        {
+            CIMTOrder order = m_manager.OrderCreate();
+            var response = m_manager.OrderRequest(DealID, order);
+            return order;
+        }
+
     }
 
 }

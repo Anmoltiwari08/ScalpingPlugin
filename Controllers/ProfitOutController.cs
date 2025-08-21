@@ -4,7 +4,6 @@ using MetaQuotes.MT5CommonAPI;
 using MetaQuotes.MT5ManagerAPI;
 using TestScalpingBackend.Models;
 using Microsoft.AspNetCore.SignalR;
-using TestScalpingBackend.TradeOperations;
 
 namespace TestScalpingBackend.Controllers
 {
@@ -14,32 +13,28 @@ namespace TestScalpingBackend.Controllers
     public class ProfitOutController : ControllerBase
     {
 
-        private readonly DealSubscribe _dealSubscribe;
+        // private readonly DealSubscribe _dealSubscribe;
         private readonly MT5Operations mT5Operations;
         private readonly CIMTManagerAPI m_manager;
-        private TradeOperation tradeOperations;
+        // private TradeOperation tradeOperations;
         private AppDbContext _context;
         private ILogger<ProfitOutController> logger;
 
-        public ProfitOutController(MT5Connection mT5Connection, IHubContext<ProfitOutDealHub> hubContext, AppDbContext context, IServiceScopeFactory scopeFactory, ILogger<ProfitOutController> logger , TradeOperation tradeOperations)
+        public ProfitOutController(MT5Connection mT5Connection, IHubContext<ProfitOutDealHub> hubContext, AppDbContext context, IServiceScopeFactory scopeFactory, ILogger<ProfitOutController> logger
+        )
         {
-            // _dealSubscribe = dealSubscribe;
             _context = context;
             m_manager = mT5Connection.m_manager;
-            this.tradeOperations = tradeOperations;
-            // this.mT5Operations = new MT5Operations(dealSubscribe.m_manager);
-            // m_manager = dealSubscribe.m_manager;
-            // tradeOperations = new TradeOperation(mT5Operations, hubContext, scopeFactory);
             this.logger = logger;
         }
-        
+
         [HttpPost("ProfitDeductionByTimeWindow")]
         public async Task<IActionResult> ProfitDeduction([FromBody] ProfitRemovalInTimeRange requestModel)
         {
 
             if (!ModelState.IsValid)
             {
-                Console.WriteLine("Rquest Model is invalid ");
+                logger.LogInformation("Request model is invalid" + ModelState);
                 return BadRequest("Rquest Model is invalid " + ModelState);
             }
 
@@ -89,7 +84,7 @@ namespace TestScalpingBackend.Controllers
                         PositionId = deal.PositionID(),
                         EntryType = deal.Entry(),
                         ActionType = deal.Action(),
-                        Time = DateTimeOffset.FromUnixTimeSeconds(deal.Time())
+                        Time = DateTimeOffset.FromUnixTimeSeconds(deal.Time()).DateTime
                     });
                 }
             }
@@ -100,7 +95,7 @@ namespace TestScalpingBackend.Controllers
             return Ok(new { Deals = result, TotalProfit = totalProfit });
 
         }
-      
+
         private CIMTDealArray GetUnmatchedDeals(CIMTDealArray accountsWithTimeDifference, CIMTDealArray finalMatchedDeals)
         {
             // var logger = _loggerFactory.CreateLogger("DealFiltering");
@@ -186,88 +181,6 @@ namespace TestScalpingBackend.Controllers
 
         }
 
-        // [HttpGet("ProfitDeductionBy")]
-        // public async Task<IActionResult> Profit()
-        // {
-
-        //     DateTimeOffset from = new DateTimeOffset(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 20, 0, 0, 0, new TimeSpan(5, 30, 0));
-        //     DateTimeOffset to = new DateTimeOffset(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 21, 0, 0, 0, new TimeSpan(5, 30, 0));
-
-        //     Console.WriteLine("From " + from + " To " + to);
-        //     long FromTimeStamp = from.ToUnixTimeSeconds();
-        //     long ToTimeStamp = to.ToUnixTimeSeconds();
-        //     Console.WriteLine("From TimeStamp " + FromTimeStamp + " To TimeStamp " + ToTimeStamp);
-
-        //     CIMTDealArray deals = m_manager.DealCreateArray();
-
-        //     var AllDealsWithScalpingComment = mT5Operations.GetAllDealsByGroupInSpecifiedTime(ref deals, FromTimeStamp, ToTimeStamp, "*");
-
-        //     Console.WriteLine(deals.Total());
-        //     deals = GetScalpingDeals(deals);
-        //     Console.WriteLine(deals.Total());
-
-        //     List<DealDto> response = new List<DealDto>();
-
-        //     for (uint i = 0; i < deals.Total(); i++)
-        //     {
-        //         CIMTDeal deal = deals.Next(i);
-
-        //         var Login = deal.Login();
-        //         var Entry = deal.Entry();
-        //         var DealId = deal.Deal();
-        //         var Action = deal.Action();
-        //         var TimeStamp = deal.Time();
-        //         var Profit = deal.Profit();
-
-        //         DateTimeOffset convertedTime = DateTimeOffset.FromUnixTimeSeconds(TimeStamp);
-        //         DateTimeOffset currentLocalTime = DateTimeOffset.Now.ToLocalTime();
-
-        //         // var ProfitPositive = -Profit;
-
-        //         mT5Operations.UpdateCredit(Login, -Profit, 2, "Scalping Addition", out ulong dealid);
-
-        //         var dealDto = new DealDto
-        //         {
-        //             Login = Login,
-        //             Profit = Profit,
-        //             Added = -Profit,
-        //             Entry = Entry,
-        //             DealId = DealId,
-        //             Action = Action,
-        //             TimeStamp = TimeStamp,
-        //             ConvertedTime = convertedTime,
-        //             CurrentLocalTime = currentLocalTime,
-        //             BalanceOperationDealId = dealid
-        //         };
-
-        //         response.Add(dealDto);
-
-        //     }
-
-        //     return Ok(response);
-
-        // }
-
-        // [HttpGet("ProfitDeductionBy")]
-        // public async Task<IActionResult> ProfitDeduct()
-        // {
-
-        //      ulong positionId = 
-        //         uint entry = 
-        //         var Action = 
-        //         string Symbol = 
-        //         ulong Login = 
-        //         double Profit = 
-        //         long outdealtime = 
-        //         var date =
-        //         ulong DealId = 
-
-        //         await tradeOperations.SendTrade(Login, entry, positionId, Action, Symbol, Profit, outdealtime, DealId);
-
-
-
-        // }
-
         private CIMTDealArray GetDealsEntryOut(CIMTDealArray deals)
         {
             CIMTDealArray EntryOutDeals = m_manager.DealCreateArray();
@@ -350,62 +263,6 @@ namespace TestScalpingBackend.Controllers
             CIMTDealArray dealsWithTimeDifference = DealsOutWithTimeDifference(deals, INDeals, out List<DateTimeOffset> InDeals, out List<double> InDealProfit);
 
             Console.WriteLine("Deals with time difference less than 3 minutes are  " + dealsWithTimeDifference.Total());
-
-
-            // int index = 0;
-            // for (uint i = 0, count = dealsWithTimeDifference.Total(); i < count; i++)
-            // {
-
-            //     CIMTDeal deal = deals.Next(i);
-
-            // if (existingDealIds.Contains(deal.Deal()))
-            // {
-            //     index++;
-            //     continue;
-            // }
-
-            // ulong positionId = deal.PositionID();
-            // uint entry = deal.Entry();
-            // var Action = deal.Action();
-            // string Symbol = deal.Symbol();
-            // ulong Login = deal.Login();
-            // double Profit = deal.Profit();
-            // long outdealtime = deal.Time();
-            // var date = DateTimeOffset.FromUnixTimeSeconds(outdealtime);
-            // ulong DealId = deal.Deal();
-            // ulong comment = deal.Commen
-
-            // await tradeOperations.SendTrade(Login, entry, positionId, Action, Symbol, Profit, outdealtime, DealId);
-            // string comment = $"Scalping Deduction #{deal.Deal()}";
-
-            // var response = mT5Operations.UpdateCredit(Login, -Profit, 2, comment, out ulong dealid);
-
-            // if (response == MTRetCode.MT_RET_REQUEST_DONE)
-            // {
-            //     Console.WriteLine("Credit Updated" + Profit + " " + dealid);
-
-            //     ProfitOutDeals profitDeal = new ProfitOutDeals
-            //     {
-            //         DealId = deal.Deal(),
-            //         Profit = deal.Profit(),
-            //         Symbol = deal.Symbol(),
-            //         Login = deal.Login(),
-            //         ClosingTime = DateTimeOffset.FromUnixTimeSeconds(deal.Time()).ToUniversalTime(),
-            //         Entry = deal.Entry(),
-            //         Action = deal.Action(),
-            //         Volume = deal.Volume(),
-            //         PositionID = deal.PositionID(),
-            //         OpeningTime = InDeals[index].ToUniversalTime(),
-            //         ProfitOut = deal.Profit() - InDealProfit[index],
-            //         Comment = deal.Comment()
-            //     };
-
-            //     _context.ProfitOutDeals.Add(profitDeal);
-            //     await _context.SaveChangesAsync();
-            // }
-
-            // index++;
-            // }
 
             return dealsWithTimeDifference;
 
