@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+ <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Platforms>AnyCPU;x64</Platforms>
+</PropertyGroup>
+
+  <ItemGroup>
+        <Reference Include="MetaQuotes.MT5CommonAPI64">
+      <HintPath>MetaQuotes.MT5CommonAPI64.dll</HintPath>
+    </Reference>
+    <Reference Include="MetaQuotes.MT5ManagerAPI64">
+      <HintPath>MetaQuotes.MT5ManagerAPI64.dll</HintPath>
+    </Reference>
+    <Reference Include="MT5APIManager64">
+      <HintPath>MT5APIManager64.dll</HintPath>
+    </Reference>
+</ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.1" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR" Version="1.2.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.7" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.7">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+  </ItemGroup>
+
+</Project>

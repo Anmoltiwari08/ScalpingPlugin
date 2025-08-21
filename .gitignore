@@ -1,0 +1,8 @@
+.vs
+bin
+Datalogs
+obj
+Migrations
+MetaQuotes.MT5CommonAPI64.dll
+MetaQuotes.MT5ManagerAPI64.dll
+MT5APIManager64.dll

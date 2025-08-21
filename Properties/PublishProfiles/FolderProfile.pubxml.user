@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!--
+https://go.microsoft.com/fwlink/?LinkID=208121.
+-->
+<Project>
+  <PropertyGroup>
+    <_PublishTargetUrl>C:\coding\CSharp\Projects\SixthProject\TestScalpingBackend\bin\Release\net9.0\publish\</_PublishTargetUrl>
+    <History>True|2025-08-04T16:19:41.4359460Z||;True|2025-08-04T21:49:16.2377277+05:30||;True|2025-07-23T02:11:35.2383616+05:30||;True|2025-07-22T01:47:34.6662143+05:30||;True|2025-07-21T21:27:18.7740918+05:30||;True|2025-07-21T21:17:55.7251535+05:30||;True|2025-07-21T18:11:31.4929183+05:30||;True|2025-07-21T18:11:10.8928746+05:30||;True|2025-06-20T01:07:23.0627952+05:30||;True|2025-06-19T14:12:09.4330150+05:30||;True|2025-06-18T00:30:32.0121940+05:30||;True|2025-06-16T16:33:25.1992844+05:30||;True|2025-06-16T09:20:54.5888513+05:30||;</History>
+    <LastFailureDetails />
+  </PropertyGroup>
+</Project>
