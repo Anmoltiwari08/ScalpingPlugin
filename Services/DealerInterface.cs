@@ -52,7 +52,6 @@ namespace TestScalpingBackend.Services
 
             var SymbolExistsInrules = symbolStore.ContainsSymbol(Symbol);
 
-
             if (entry == 1 && (Action == 0 || Action == 1) && CreditProfit == true && Profit > 0 && SymbolExistsInrules == true)
             {
                 _logger.LogInformation("DEAL ADDED for background operation ");
@@ -77,10 +76,10 @@ namespace TestScalpingBackend.Services
 
             }
 
-            if(SymbolExistsInrules == false)
+            if (SymbolExistsInrules == false)
             {
                 _logger.LogInformation("Symbol  Not found In the rule  " + Symbol);
-                CreditProfit = false;
+                deal.Release();
             }
 
         }

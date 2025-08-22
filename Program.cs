@@ -1,8 +1,30 @@
 using TestScalpingBackend.Services;
 using Microsoft.EntityFrameworkCore;
 using DictionaryExample;
+using Serilog;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.Text;
+using System.Security.Claims;
+using TestScalpingBackend.Models;
+using TestScalpingBackend.Middleware;
+using WebServicesApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+
+Log.Logger = new LoggerConfiguration()
+    .Enrich.FromLogContext()
+    .Enrich.WithThreadId()
+    .WriteTo.Console()
+    .WriteTo.File(
+        path: "Logs/log-.txt",
+        rollingInterval: RollingInterval.Month,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level}] ({ThreadId}) {Message}{NewLine}{Exception}"
+    )
+    .CreateLogger();
+
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
@@ -21,11 +43,33 @@ builder.Services.AddSingleton<DealSubscribe>();
 builder.Services.AddScoped<MT5Operations>();
 builder.Services.AddScoped<ScalpingDeduction>();
 
+builder.Services.AddScoped<JwtAuthorizationFilter>();
+builder.Services.AddScoped<AuthService>();
+
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
+                  ?? throw new Exception("JWT settings missing");
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidAudience = jwtSettings.Audience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+        };
+    });
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
         policy => policy.WithOrigins(
-                        //   "http://194.35.120.26:3002"
+                         //   "http://194.35.120.26:3002"
                          "http://localhost:3002"
                                      )
                         .AllowCredentials()
@@ -35,6 +79,32 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.UseCors("AllowReactApp");
+
+
+app.UseSerilogRequestLogging();
+app.UseMiddleware<GlobalErrorHandlingMiddleware>();
+
+app.Use(async (context, next) =>
+{
+    var userId = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+    var email = context.User?.FindFirst(ClaimTypes.Email)?.Value;
+
+    if (!string.IsNullOrEmpty(userId))
+    {
+        using (Serilog.Context.LogContext.PushProperty("UserId", userId))
+        {
+            await next();
+        }
+        using (Serilog.Context.LogContext.PushProperty("emailId", email))
+        {
+            await next();
+        }
+    }
+    else
+    {
+        await next();
+    }
+});
 
 using (var scope = app.Services.CreateScope())
 {
