@@ -128,10 +128,12 @@ namespace TestScalpingBackend.Services
 
         }
 
-        public CIMTOrder GetOrderByID(ulong DealID)
+        public CIMTOrder GetOrderByID(ulong DealID , out MTRetCode responseCode)
         {
             CIMTOrder order = m_manager.OrderCreate();
             var response = m_manager.OrderRequest(DealID, order);
+            responseCode = response;
+
             return order;
         }
          

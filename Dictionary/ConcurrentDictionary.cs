@@ -88,8 +88,7 @@ namespace DictionaryExample
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error checking if symbol {symbolName} exists");
-                return false;
+                throw new Exception($"Error checking if symbol from dicionary {symbolName} ", ex);
             }
         }
 

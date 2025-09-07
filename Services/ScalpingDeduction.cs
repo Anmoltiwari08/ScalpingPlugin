@@ -1,124 +1,168 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using TestScalpingBackend.Models;
-namespace TestScalpingBackend.Services;
-
+using TestScalpingBackend.Services;
+using System.Text.Json;
 using MetaQuotes.MT5CommonAPI;
-using Microsoft.Extensions.Logging;
 
 public class ScalpingDeduction
 {
+    private readonly MT5Operations _mT5Operations;
+    private readonly IHubContext<ProfitOutDealHub> _hubContext;
+    private readonly ILogger<ScalpingDeduction> _logger;
+    private readonly AppDbContext _context;
+    private readonly IProfitDeductionQueue _profitDeductionQueue;
 
-    private MT5Operations mT5Operations;
-    private IHubContext<ProfitOutDealHub> _hubContext;
-    private ILogger<ScalpingDeduction> logger;
-    private AppDbContext _context;
-
-    public ScalpingDeduction(DealSubscribe dealSubscribe, MT5Operations mT5Operations, IHubContext<ProfitOutDealHub> hubContext, ILogger<ScalpingDeduction> logger, AppDbContext context)
+    public ScalpingDeduction(MT5Operations mT5Operations, IHubContext<ProfitOutDealHub> hubContext, ILogger<ScalpingDeduction> logger, AppDbContext context, IProfitDeductionQueue profitDeductionQueue)
     {
-        this.mT5Operations = mT5Operations;
-        this.logger = logger;
+        _mT5Operations = mT5Operations;
         _hubContext = hubContext;
+        _logger = logger;
+        _profitDeductionQueue = profitDeductionQueue;
         _context = context;
-        dealSubscribe.ProfitOutEvent += ProfitDeduction;
     }
 
-    public void ProfitDeduction(NewDealDto newDealDto)
+    public async Task ProfitDeductionAsync(NewDealDto newDealDto)
     {
-
-        var PositionId = newDealDto.PositionId;
-        var OutDealId = newDealDto.DealId;
-        var OutProfit = newDealDto.Profit;
-
-        var InOrder = mT5Operations.GetOrderByID(PositionId);
-
-        if (InOrder == null)
+        if (newDealDto == null)
         {
-            logger.LogError("No order for position {PositionId} was found. OutDealId={OutDealId}, OutProfit={OutProfit}, Login={Login}. So profit out will not be made.", PositionId, OutDealId, OutProfit, newDealDto.Login);
+            _logger.LogError("Received null deal in ProfitDeductionAsync");
             return;
         }
 
-        var InDealTime = InOrder.TimeDone();
-        var InDealDateTime = DateTimeOffset.FromUnixTimeSeconds(InDealTime).DateTime;
-
-        InOrder?.Release();
-
-        DeductProfit(InDealDateTime, newDealDto.Time, OutProfit, newDealDto.Login, $"Scalping Deduction #{OutDealId}", OutDealId);
-
-    }
-
-    public void DeductProfit(DateTime InTime, DateTime OutTime, double Profit, ulong Login, string comment, ulong outDealId)
-    {
-
-        var CalculateDifferenceOfTime = OutTime - InTime;
-
-        if (CalculateDifferenceOfTime.TotalMinutes < 3 && Profit > 0)
-        {
-
-            // var UpdateCredit = mT5Operations.UpdateCredit(Login, -Profit, 2, comment, out ulong dealid);
-
-            // if (UpdateCredit == MTRetCode.MT_RET_REQUEST_DONE)
-            // {
-            //     logger.LogInformation($"Credit Updated Profit {Profit} dealid={outDealId} Login={Login} OutTime={OutTime} InTime={InTime} comment={comment}");
-            //     // PositionUpdate(outDealId, OutTime, InTime);
-            //     _ = Task.Run( () => PositionUpdate(outDealId, OutTime, InTime));
-
-            // }
-            // else
-            // {
-            //    logger.LogError($"Credit Not Updated Profit {Profit} Outdealid={outDealId} Login={Login} OutTime={OutTime} InTime={InTime} comment={comment} ErrorCode={UpdateCredit}");
-            // }
-
-        }
-        
-    }
-
-    public async Task PositionUpdate(ulong OutDealId, DateTime OutDealTime, DateTime InDealTime)
-    {
-        var Outdeal = mT5Operations.GetDealByID(OutDealId);
-
-        ProfitOutDeals profitDeal = new ProfitOutDeals
-        {
-            DealId = Outdeal.Deal(),
-            Symbol = Outdeal.Symbol(),
-            Login = Outdeal.Login(),
-            ClosingTime = OutDealTime,
-            Entry = Outdeal.Entry(),
-            Action = Outdeal.Action(),
-            Volume = Outdeal.Volume(),
-            PositionID = Outdeal.PositionID(),
-            OpeningTime = InDealTime,
-            ProfitOut = Outdeal.Profit(),
-            Comment = Outdeal.Comment()
-        };
- 
-        await SendProfitOutDealsAsync(profitDeal);
+        ulong positionId = newDealDto.PositionId;
+        ulong outDealId = newDealDto.DealId;
+        double outProfit = newDealDto.Profit;
 
         try
         {
-            Console.WriteLine("Profit Deal Added in Database ");
-            _context.ProfitOutDeals.Add(profitDeal);
-            await _context.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex)
-        {
-            foreach (var entry in ex.Entries)
+
+            var inOrder = _mT5Operations.GetOrderByID(positionId, out var responseCode);
+
+            if (responseCode != MTRetCode.MT_RET_OK)
             {
-                logger.LogError($"Error updating {entry.Entity.GetType().Name}: {ex.Message}");
+                _logger.LogCritical(
+                     "Failed to get in order from MT5 for Data : {json} With Response code : {responseCode}.",
+                     JsonSerializer.Serialize(newDealDto), responseCode);
+                return;
             }
+
+            if (inOrder == null)
+            {
+                _logger.LogWarning(
+                    "No In  order found from MT5 with Data : {json} .",
+                    JsonSerializer.Serialize(newDealDto));
+
+                return;
+            }
+
+            DateTime inDealDateTime;
+            try
+            {
+                var inDealTime = inOrder.TimeDone();
+                inDealDateTime = DateTimeOffset.FromUnixTimeSeconds(inDealTime).DateTime;
+                string Comment = $"Scalping Deduction #{outDealId}";
+                await DeductProfitAsync(inDealDateTime, newDealDto.Time, newDealDto.Profit, newDealDto.Login, Comment, outDealId, newDealDto.Symbol, positionId, newDealDto.Volume, newDealDto.EntryType, newDealDto.ActionType);
+            }
+            catch (Exception timeEx)
+            {
+                _logger.LogError(
+                    timeEx,
+                    "Failed to process deal in ProfitDealAsync for PositionId={PositionId}, OutDealId={OutDealId}, Login={Login}",
+                    positionId, outDealId, newDealDto.Login);
+
+                inOrder?.Release();
+                return;
+            }
+
+            inOrder?.Release();
         }
         catch (Exception ex)
         {
-            logger.LogError($"Error updating the Profit Deals in the Database : {ex.Message}");
+            try
+            {
+                var payload = JsonSerializer.Serialize(newDealDto);
+                _logger.LogError(
+                    ex,
+                    "Unhandled error in ProfitDeductionAsync for deal payload: {Payload}",
+                    payload);
+            }
+            catch (Exception logEx)
+            {
+                _logger.LogError(
+                    logEx,
+                    "Failed while logging error in ProfitDeductionAsync. DealId={OutDealId}, Login={Login} PositionId={PositionId}",
+                    outDealId, newDealDto.Login, positionId);
+            }
         }
-
     }
 
-    public async Task SendProfitOutDealsAsync(ProfitOutDeals deals)
+    private async Task DeductProfitAsync(
+     DateTime inTime,
+     DateTime outTime,
+     double profit,
+     ulong login,
+     string comment,
+     ulong outDealId,
+     string symbol,
+     ulong positionId,
+     double volume,
+     uint entry,
+     uint action)
     {
-        Console.WriteLine("Deal Send to the client ");
-        await _hubContext.Clients.All.SendAsync("ReceiveProfitOutDeals", deals);
+        try
+        {
+            var diff = outTime - inTime;
+            
+            if (diff.TotalMinutes >= 3)
+            {
+                return;
+            }
+
+            if (profit <= 0)
+            {
+                _logger.LogInformation(
+                    "Profit deduction skipped: OutDealId={OutDealId}, Login={Login}, Reason=Profit {Profit} <= 0",
+                    outDealId, login, profit);
+                return;
+            }
+            
+            var profitDeal = new ProfitOutDeals
+            {
+                DealId = outDealId,
+                Symbol = symbol,
+                Login = login,
+                ClosingTime = outTime,
+                Entry = entry,
+                Action = action,
+                Volume = volume,
+                PositionID = positionId,
+                OpeningTime = inTime,
+                ProfitOut = profit,
+                Comment = comment
+            };
+            
+            await _profitDeductionQueue.EnqueueAsync(profitDeal);
+
+            _logger.LogInformation(
+                "Enqueued ProfitDeduction DealId={DealId}, Login={Login}, Profit={Profit}, HoldingTime={HoldingMinutes} min",
+                profitDeal.DealId, profitDeal.Login, profitDeal.ProfitOut, diff.TotalMinutes);
+        }
+        catch (OperationCanceledException)
+        {
+                        _logger.LogWarning(
+                "Profit deduction enqueue canceled for DealId={DealId}, Login={Login}",
+                outDealId, login);
+        }
+        catch (Exception ex)
+        {
+            
+            _logger.LogError(
+                ex,
+                "Unexpected error in DeductProfitAsync. DealId={DealId}, Login={Login}, Profit={Profit}",
+                outDealId, login, profit);
+        }
     }
+
 
 }
 

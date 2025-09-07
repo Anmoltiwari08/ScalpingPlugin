@@ -16,7 +16,7 @@ namespace TestScalpingBackend.Models
         public ulong DealId { get; set; }
         public uint Entry { get; set; }
         public uint Action { get; set; }
-        public ulong Volume { get; set; }
+        public double Volume { get; set; }
         public string Comment { get; set; }
     }
 
@@ -76,11 +76,12 @@ namespace TestScalpingBackend.Models
     {
         public ulong DealId { get; set; }
         public double Profit { get; set; }
+        public double Volume { get; set; }
         public ulong Login { get; set; }
         public ulong PositionId { get; set; }
         public string Symbol { get; set; }
-        public ulong EntryType { get; set; }
-        public ulong ActionType { get; set; }
+        public uint EntryType { get; set; }
+        public uint ActionType { get; set; }
         public DateTime Time { get; set; }
     }
         

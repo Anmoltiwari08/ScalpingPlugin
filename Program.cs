@@ -40,8 +40,14 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSingleton<MT5Connection>();
 builder.Services.AddSingleton<SymbolStore>();
 builder.Services.AddSingleton<DealSubscribe>();
-builder.Services.AddScoped<MT5Operations>();
-builder.Services.AddScoped<ScalpingDeduction>();
+builder.Services.AddSingleton<MT5Operations>();
+builder.Services.AddSingleton<ScalpingDeduction>();
+
+builder.Services.AddSingleton<IDealQueue, DealQueue>();
+builder.Services.AddSingleton<IProfitDeductionQueue, ProfitDeductionQueue>();
+
+builder.Services.AddHostedService<DealProcessingService>();
+builder.Services.AddHostedService<ProfitDeductionService>();
 
 builder.Services.AddScoped<JwtAuthorizationFilter>();
 builder.Services.AddScoped<AuthService>();
