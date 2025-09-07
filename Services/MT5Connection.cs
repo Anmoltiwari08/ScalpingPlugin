@@ -1,12 +1,11 @@
 using MetaQuotes.MT5ManagerAPI;
 using MetaQuotes.MT5CommonAPI;
-using System;
 
 namespace TestScalpingBackend.Services
 {
     public class MT5Connection
     {
-        uint MT5_CONNECT_TIMEOUT = 52000000;
+        uint MT5_CONNECT_TIMEOUT = 520000000;
 
         public CIMTManagerAPI m_manager = null!;
 
@@ -100,4 +99,4 @@ namespace TestScalpingBackend.Services
 
 }
 
-     
+    

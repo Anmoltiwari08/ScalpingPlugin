@@ -12,19 +12,19 @@ using WebServicesApi.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-
 Log.Logger = new LoggerConfiguration()
     .Enrich.FromLogContext()
     .Enrich.WithThreadId()
     .WriteTo.Console()
     .WriteTo.File(
         path: "Logs/log-.txt",
-        rollingInterval: RollingInterval.Month,
+        rollingInterval: RollingInterval.Day,   // new file every day
+        retainedFileCountLimit: 30,             // keep last 30 files (approx 1 month)
         outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss} [{Level}] ({ThreadId}) {Message}{NewLine}{Exception}"
     )
     .CreateLogger();
 
+builder.Host.UseSerilog();
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
@@ -69,7 +69,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp",
         policy => policy.WithOrigins(
-                         //   "http://194.35.120.26:3002"
+                         //   "http://41.215.240.85:3002"
                          "http://localhost:3002"
                                      )
                         .AllowCredentials()
@@ -79,7 +79,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 app.UseCors("AllowReactApp");
-
 
 app.UseSerilogRequestLogging();
 app.UseMiddleware<GlobalErrorHandlingMiddleware>();
@@ -126,15 +125,15 @@ using (var scope = app.Services.CreateScope())
     {
         logger.LogError(ex, "❌ Error while connecting to the database.");
     }
+
+    // services.GetRequiredService<ScalpingDeduction>();
 }
 
 var MT5Connection = app.Services.GetRequiredService<MT5Connection>();
 app.Services.GetRequiredService<SymbolStore>();
-app.Services.GetRequiredService<ScalpingDeduction>();
+
 var dealSubscribe = app.Services.GetRequiredService<DealSubscribe>();
 MT5Connection.m_manager.DealSubscribe(dealSubscribe);
-
-
 
 app.MapHub<ProfitOutDealHub>("/profitoutdealhub");
 

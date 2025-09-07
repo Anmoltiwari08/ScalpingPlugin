@@ -6,9 +6,9 @@ namespace TestScalpingBackend.Services
 {
     public class MT5Operations
     {
-
+        
         public CIMTManagerAPI m_manager = null!;
-
+    
         public MT5Operations(MT5Connection m_manager)
         {
             this.m_manager = m_manager.m_manager;
@@ -22,6 +22,25 @@ namespace TestScalpingBackend.Services
             deals = dealsArray;
             return result;
 
+        }
+
+        public MTRetCode GetAllTheOpnOrdersByIDs(ulong[] IDs, out CIMTOrderArray ordersArray)
+        {
+            CIMTOrderArray ordersArrays = m_manager.OrderCreateArray();
+            m_manager.OrderRequestByTickets(IDs, ordersArrays);
+
+            ordersArray = ordersArrays;
+            return MTRetCode.MT_RET_OK;
+
+        }
+
+        public MTRetCode GetAllTheCloseOrdersByIDs(ulong[] IDs, out CIMTOrderArray ordersArray)
+        {
+            CIMTOrderArray ordersArrays = m_manager.OrderCreateArray();
+            m_manager.HistoryRequestByTickets(IDs, ordersArrays);
+
+            ordersArray = ordersArrays;
+            return MTRetCode.MT_RET_OK;
         }
 
         public MTRetCode UpdateCredit(ulong login, double credit, uint type, string comment, out ulong dealid)
@@ -54,14 +73,38 @@ namespace TestScalpingBackend.Services
         //     return response;
         // }
 
+        public MTRetCode CreateArrayOfDeals(out CIMTDealArray deals)
+        {
+            CIMTDealArray dealsArray = m_manager.DealCreateArray();
+            deals = dealsArray;
+            return MTRetCode.MT_RET_OK;
+        }
+
+        public MTRetCode CreateArrayOfOrders(out CIMTOrderArray orders)
+        {
+            CIMTOrderArray ordersArray = m_manager.OrderCreateArray();
+            orders = ordersArray;
+            return MTRetCode.MT_RET_OK;
+        }
+
+        public MTRetCode CreateOrder(out CIMTOrder order)
+        {
+            CIMTOrder orderArray = m_manager.OrderCreate();
+            order = orderArray;
+            return MTRetCode.MT_RET_OK;
+        }
+
         public long DateTimeToUnixTime(DateTime dateTime)
         {
             return ((DateTimeOffset)dateTime).ToUnixTimeSeconds();
         }
 
-        public MTRetCode GetAllDealsByGroupInSpecifiedTime(ref CIMTDealArray dealsArray, long from, long to, string groupmask)
+        public MTRetCode GetAllDealsByGroupInSpecifiedTime(out CIMTDealArray dealsArray, long from, long to, string groupmask)
         {
-            var response = m_manager.DealRequestByGroup(groupmask, from, to, dealsArray);
+            CIMTDealArray dealsArrayin = m_manager.DealCreateArray();
+            var response = m_manager.DealRequestByGroup(groupmask, from, to, dealsArrayin);
+            // Console.WriteLine("Total " + dealsArrayin.Total() + "with response is " + response);
+            dealsArray = dealsArrayin;
 
             return response;
 
@@ -91,6 +134,7 @@ namespace TestScalpingBackend.Services
             var response = m_manager.OrderRequest(DealID, order);
             return order;
         }
+         
 
     }
 

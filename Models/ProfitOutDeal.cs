@@ -7,7 +7,7 @@ namespace TestScalpingBackend.Models
     {
         public Guid Id { get; set; }
         public double ProfitOut { get; set; }
-        // public double Profit { get; set; }
+        public string TimeDifferenceInSeconds { get; set; }
         public ulong PositionID { get; set; }
         public ulong Login { get; set; }
         public string Symbol { get; set; }
@@ -30,18 +30,32 @@ namespace TestScalpingBackend.Models
         public string SortDir { get; set; } = "";
         public string Search { get; set; } = "";
         public string SearchColumn { get; set; } = "";
-
     }
 
-    public class ProfitRemovalInTimeRange
+    public class ProfitRemovalInTimeRange : IValidatableObject
     {
-
         [Required(ErrorMessage = "Please specify a start time.")]
-        public DateTimeOffset StartTime { get; set; }
+        public DateTime StartTime { get; set; }
 
         [Required(ErrorMessage = "Please specify an end time.")]
-        public DateTimeOffset EndTime { get; set; }
+        public DateTime EndTime { get; set; }
 
+        public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+        {
+            if (EndTime <= StartTime)
+            {
+                yield return new ValidationResult(
+                    "End time must be greater than Start time.",
+                    new[] { nameof(EndTime) });
+            }
+
+            // if ((EndTime - StartTime).TotalDays > 1)
+            // {
+            //     yield return new ValidationResult(
+            //         "The difference between Start time and End time cannot exceed 1 day.",
+            //         new[] { nameof(StartTime), nameof(EndTime) });
+            // }
+        }
     }
 
     public class DealDto
@@ -69,6 +83,6 @@ namespace TestScalpingBackend.Models
         public ulong ActionType { get; set; }
         public DateTime Time { get; set; }
     }
-
-
+        
 }
+     

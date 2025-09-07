@@ -1,11 +1,9 @@
 using System.Collections.Concurrent;
-using Microsoft.Extensions.Logging;
 
 namespace DictionaryExample
 {
     public class SymbolStore
     {
-        // Just store symbols as keys, bool as a dummy value
         private readonly ILogger<SymbolStore> _logger;
         private readonly IServiceProvider _serviceProvider;
         private ConcurrentDictionary<string, bool> _symbols = new ConcurrentDictionary<string, bool>();
@@ -24,8 +22,13 @@ namespace DictionaryExample
             var symbols = context.ScalpingSymbols.Select(x => x.SymbolName).ToList();
             foreach (var symbol in symbols)
             {
-                _symbols.TryAdd(symbol, true);
+                if (!_symbols.TryAdd(symbol, true))
+                {
+                    _logger.LogError($"In the initial creating of the dictionary ,  adding Found symbols in the conncurrent dictionary giving error in Symbol :{symbol}");
+
+                }
             }
+
         }
 
         public bool AddSymbol(string symbolName)
@@ -34,18 +37,17 @@ namespace DictionaryExample
             {
                 if (_symbols.TryAdd(symbolName, true))
                 {
-                    _logger.LogInformation($"Added symbol {symbolName}");
                     return true;
                 }
                 else
                 {
-                    _logger.LogInformation($"Symbol {symbolName} already exists");
                     return false;
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error adding symbol {symbolName}");
+                _logger.LogError(ex.Message, $"Error adding symbol {symbolName}");
+                _logger.LogError($"Error adding symbol {symbolName}", ex);
                 return false;
             }
 
@@ -57,12 +59,10 @@ namespace DictionaryExample
             {
                 if (_symbols.TryRemove(symbolName, out _))
                 {
-                    _logger.LogInformation($"Removed symbol {symbolName}");
                     return true;
                 }
                 else
                 {
-                    _logger.LogInformation($"Symbol {symbolName} does not exist");
                     return false;
                 }
             }
@@ -79,12 +79,10 @@ namespace DictionaryExample
             {
                 if (_symbols.ContainsKey(symbolName))
                 {
-                    _logger.LogInformation($"Symbol {symbolName} exists");
                     return true;
                 }
                 else
                 {
-                    _logger.LogInformation($"Symbol {symbolName} does not exist");
                     return false;
                 }
             }
@@ -107,6 +105,7 @@ namespace DictionaryExample
                 return Enumerable.Empty<string>();
             }
         }
+        
     }
 }
 

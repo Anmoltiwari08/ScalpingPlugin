@@ -1,4 +1,3 @@
-
 namespace TestScalpingBackend.Models;
 
 public class JwtSettings
@@ -8,8 +7,6 @@ public class JwtSettings
     public required string Audience { get; set; }
     public int ExpireMinutes { get; set; }
 }
-
-
 
 public partial class LoginRequest
 {

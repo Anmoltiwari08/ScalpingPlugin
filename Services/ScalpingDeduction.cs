@@ -1,8 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.SignalR;
 using TestScalpingBackend.Models;
-using MetaQuotes.MT5CommonAPI;
 namespace TestScalpingBackend.Services;
+
+using MetaQuotes.MT5CommonAPI;
+using Microsoft.Extensions.Logging;
 
 public class ScalpingDeduction
 {
@@ -53,38 +55,31 @@ public class ScalpingDeduction
         if (CalculateDifferenceOfTime.TotalMinutes < 3 && Profit > 0)
         {
 
-            var UpdateCredit = mT5Operations.UpdateCredit(Login, -Profit, 2, comment, out ulong dealid);
+            // var UpdateCredit = mT5Operations.UpdateCredit(Login, -Profit, 2, comment, out ulong dealid);
 
-            if (UpdateCredit == MTRetCode.MT_RET_REQUEST_DONE)
-            {
-                logger.LogInformation($"Credit Updated Profit {Profit} dealid={dealid} Login={Login} OutTime={OutTime} InTime={InTime} comment={comment}");
-                // PositionUpdate(outDealId, OutTime, InTime);
-                _ = Task.Run( () => PositionUpdate(outDealId, OutTime, InTime));
+            // if (UpdateCredit == MTRetCode.MT_RET_REQUEST_DONE)
+            // {
+            //     logger.LogInformation($"Credit Updated Profit {Profit} dealid={outDealId} Login={Login} OutTime={OutTime} InTime={InTime} comment={comment}");
+            //     // PositionUpdate(outDealId, OutTime, InTime);
+            //     _ = Task.Run( () => PositionUpdate(outDealId, OutTime, InTime));
 
-            }
-            else
-            {
-                logger.LogError($"Credit Not Updated Profit {Profit} Outdealid={outDealId} Login={Login} OutTime={OutTime} InTime={InTime} comment={comment} ErrorCode={UpdateCredit}");
-            }
-
-        }
-        else
-        {
-
-            logger.LogInformation("Credit Not Updated becuase his date range is not under 3 minutes");
+            // }
+            // else
+            // {
+            //    logger.LogError($"Credit Not Updated Profit {Profit} Outdealid={outDealId} Login={Login} OutTime={OutTime} InTime={InTime} comment={comment} ErrorCode={UpdateCredit}");
+            // }
 
         }
-
+        
     }
 
-    public async Task  PositionUpdate(ulong OutDealId, DateTime OutDealTime, DateTime InDealTime)
+    public async Task PositionUpdate(ulong OutDealId, DateTime OutDealTime, DateTime InDealTime)
     {
         var Outdeal = mT5Operations.GetDealByID(OutDealId);
 
         ProfitOutDeals profitDeal = new ProfitOutDeals
         {
             DealId = Outdeal.Deal(),
-            // Profit = Outdeal.Profit(),
             Symbol = Outdeal.Symbol(),
             Login = Outdeal.Login(),
             ClosingTime = OutDealTime,
@@ -96,13 +91,13 @@ public class ScalpingDeduction
             ProfitOut = Outdeal.Profit(),
             Comment = Outdeal.Comment()
         };
-
+ 
         await SendProfitOutDealsAsync(profitDeal);
 
         try
         {
             Console.WriteLine("Profit Deal Added in Database ");
-             _context.ProfitOutDeals.Add(profitDeal);
+            _context.ProfitOutDeals.Add(profitDeal);
             await _context.SaveChangesAsync();
         }
         catch (DbUpdateException ex)

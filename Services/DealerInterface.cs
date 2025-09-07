@@ -10,7 +10,7 @@ namespace TestScalpingBackend.Services
     public class DealSubscribe : CIMTDealSink
     {
 
-        private int _creditProfit = 0;
+        private int _creditProfit = 1;
         public bool CreditProfit
         {
             get => Interlocked.CompareExchange(ref _creditProfit, 1, 1) == 1;
@@ -25,14 +25,13 @@ namespace TestScalpingBackend.Services
         {
             _hubContext.Clients.All.SendAsync("CreditProfitChanged", currentValue);
         }
-        public event Action<NewDealDto> ProfitOutEvent;
         private SymbolStore symbolStore;
+        public event Action<NewDealDto> ProfitOutEvent;
         private readonly ILogger<DealSubscribe> _logger;
 
         public DealSubscribe(IHubContext<ProfitOutDealHub> hubContext, ILogger<DealSubscribe> logger, SymbolStore symbolStore)
         {
             _hubContext = hubContext;
-
             _logger = logger;
             RegisterSink();
             this.symbolStore = symbolStore;
@@ -52,10 +51,8 @@ namespace TestScalpingBackend.Services
 
             var SymbolExistsInrules = symbolStore.ContainsSymbol(Symbol);
 
-            if (entry == 1 && (Action == 0 || Action == 1) && CreditProfit == true && Profit > 0 && SymbolExistsInrules == true)
+            if (entry == 1 && (Action == 0 || Action == 1) && CreditProfit == true && Profit > 0 && SymbolExistsInrules == true )
             {
-                _logger.LogInformation("DEAL ADDED for background operation ");
-
                 var model = new NewDealDto()
                 {
                     PositionId = positionId,
@@ -68,20 +65,11 @@ namespace TestScalpingBackend.Services
                     DealId = DealId
                 };
 
-                string Data = JsonSerializer.Serialize<NewDealDto>(model);
-
-                _logger.LogInformation("DEAL ADDED for background operation " + Data);
-
                 ProfitOutEvent?.Invoke(model);
 
             }
 
-            if (SymbolExistsInrules == false)
-            {
-                _logger.LogInformation("Symbol  Not found In the rule  " + Symbol);
-                deal.Release();
-            }
-
+            deal?.Release();
         }
 
     }
