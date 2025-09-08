@@ -40,7 +40,7 @@ namespace TestScalpingBackend.Services
 
         public override async void OnDealAdd(CIMTDeal deal)
         {
-          
+
             ulong positionId = deal.PositionID();
             uint entry = deal.Entry();
             uint Action = deal.Action();
@@ -50,7 +50,7 @@ namespace TestScalpingBackend.Services
             long outdealtime = deal.Time();
             ulong DealId = deal.Deal();
             ulong Volume = deal.Volume();
-                                                   
+
             var model = new NewDealDto()
             {
                 PositionId = positionId,
@@ -63,14 +63,16 @@ namespace TestScalpingBackend.Services
                 DealId = DealId,
                 Volume = Volume
             };
-            
+
             try
             {
                 try
                 {
                     var SymbolExistsInrules = symbolStore.ContainsSymbol(Symbol);
 
-                    if (entry == 1 && (Action == 0 || Action == 1) && CreditProfit == true && Profit > 0 && SymbolExistsInrules == true)
+                    if (entry == 1 && (Action == 0 || Action == 1) && Profit > 0
+                    // && CreditProfit == true && SymbolExistsInrules == true
+                     )
                     {
 
                         try
@@ -94,13 +96,13 @@ namespace TestScalpingBackend.Services
                     );
 
                 }
-               
+
             }
             catch (Exception ex)
             {
-                 var json = JsonSerializer.Serialize(model);
+                var json = JsonSerializer.Serialize(model);
                 _logger.LogError(ex,
-                "Error processing deal data : {json} ",json);
+                "Error processing deal data : {json} ", json);
             }
             finally
             {

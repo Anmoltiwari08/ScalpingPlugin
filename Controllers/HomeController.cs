@@ -3,7 +3,6 @@ using TestScalpingBackend.Services;
 using MetaQuotes.MT5ManagerAPI;
 using TestScalpingBackend.Models;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 
 namespace TestScalpingBackend.Controllers
 {

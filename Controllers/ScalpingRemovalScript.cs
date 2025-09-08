@@ -4,6 +4,7 @@ using MetaQuotes.MT5CommonAPI;
 using MetaQuotes.MT5ManagerAPI;
 using TestScalpingBackend.Models;
 using System.Data;
+using DictionaryExample;
 
 namespace TestScalpingBackend.Controllers
 {
@@ -12,18 +13,21 @@ namespace TestScalpingBackend.Controllers
     [Route("/api/v1/[controller]")]
     public class ProfitRemovalScriptController : ControllerBase
     {
-
         private MT5Operations mT5Operations;
         private ILogger<ProfitRemovalScriptController> logger;
         private AppDbContext appDbContext;
         private readonly CIMTManagerAPI m_manager;
+         private SymbolStore symbolStore;
+        private readonly IProfitDeductionQueue _profitDeductionQueue;
 
-        public ProfitRemovalScriptController(MT5Connection mT5Connection, ILogger<ProfitRemovalScriptController> logger, AppDbContext context)
+        public ProfitRemovalScriptController(MT5Connection mT5Connection, MT5Operations mT5Operations, ILogger<ProfitRemovalScriptController> logger, AppDbContext context, IProfitDeductionQueue profitDeductionQueue, SymbolStore symbolStore)
         {
-            mT5Operations = new MT5Operations(mT5Connection);
+            this.mT5Operations = mT5Operations;
             this.logger = logger;
             appDbContext = context;
             m_manager = mT5Connection.m_manager;
+            _profitDeductionQueue = profitDeductionQueue;
+            this.symbolStore = symbolStore;
         }
 
         [HttpPost("ProfitDeductionByTimeWindow")]
@@ -103,17 +107,7 @@ namespace TestScalpingBackend.Controllers
 
                 List<ProfitOutDeals> dataofdeals = UnmatchedDealModal(FinalUnmatchedDeals, GetEnrtryInOrderArray);
 
-                foreach (var deal in dataofdeals)
-                {
-                    string comment = $"Scalping Deduction #{deal.DealId}";
-
-                    var response = mT5Operations.UpdateCredit(deal.Login, -deal.ProfitOut, 2, comment, out ulong dealid);
-
-                    if (response == MTRetCode.MT_RET_REQUEST_DONE)
-                    {
-                        Console.WriteLine("Profit Deducted :" + deal.ProfitOut + "and dealids of the removed deal is:" + dealid);
-                    }
-                }
+                await _profitDeductionQueue.EnqueueRangeAsync(dataofdeals);
 
                 FinalUnmatchedDeals?.Dispose();
 
@@ -146,7 +140,9 @@ namespace TestScalpingBackend.Controllers
             for (uint i = 0, count = deals.Total(); i < count; i++)
             {
                 CIMTDeal deal = deals.Next(i);
-                if (deal.Entry() == 1 && (deal.Action() == 0 || deal.Action() == 1) && deal.Profit() > 0)
+                var IsSymbolExist = symbolStore.ContainsSymbol(deal.Symbol());
+
+                if (deal.Entry() == 1 && (deal.Action() == 0 || deal.Action() == 1) && deal.Profit() > 0 && IsSymbolExist)
                 {
                     EntryOutDeals.AddCopy(deal);
                 }
@@ -206,6 +202,7 @@ namespace TestScalpingBackend.Controllers
                 CIMTDeal deal = deals.Next(i);
                 OrderID.Add(deal.PositionID());
             }
+
             Console.WriteLine("Total no of deals for entry in or order are " + OrderID.Count());
 
             Dictionary<ulong, long> ordersDictionary = new Dictionary<ulong, long>();

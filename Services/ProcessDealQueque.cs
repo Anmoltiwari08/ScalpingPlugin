@@ -6,13 +6,14 @@ public interface IProfitDeductionQueue
 {
     ValueTask EnqueueAsync(ProfitOutDeals deal, CancellationToken cancellationToken = default);
     IAsyncEnumerable<ProfitOutDeals> DequeueAllAsync(CancellationToken cancellationToken);
+    ValueTask EnqueueRangeAsync(List<ProfitOutDeals> deals, CancellationToken cancellationToken = default);
 }
 
 public class ProfitDeductionQueue : IProfitDeductionQueue
-{   
-    
+{
+
     private readonly Channel<ProfitOutDeals> _channel;
-    private readonly ConcurrentDictionary<ulong, byte> _inQueue; 
+    private readonly ConcurrentDictionary<ulong, byte> _inQueue;
 
     public ProfitDeductionQueue()
     {
@@ -41,4 +42,19 @@ public class ProfitDeductionQueue : IProfitDeductionQueue
             yield return deal;
         }
     }
+
+    public async ValueTask EnqueueRangeAsync(List<ProfitOutDeals> deals, CancellationToken cancellationToken = default)
+    {
+        foreach (var deal in deals)
+        {
+            
+            if (_inQueue.TryAdd(deal.DealId, 0))
+            {
+                await _channel.Writer.WriteAsync(deal, cancellationToken);
+            }
+        }
+    }
+
+
+
 }

@@ -9,16 +9,14 @@ public class ScalpingDeduction
     private readonly MT5Operations _mT5Operations;
     private readonly IHubContext<ProfitOutDealHub> _hubContext;
     private readonly ILogger<ScalpingDeduction> _logger;
-    private readonly AppDbContext _context;
     private readonly IProfitDeductionQueue _profitDeductionQueue;
 
-    public ScalpingDeduction(MT5Operations mT5Operations, IHubContext<ProfitOutDealHub> hubContext, ILogger<ScalpingDeduction> logger, AppDbContext context, IProfitDeductionQueue profitDeductionQueue)
+    public ScalpingDeduction(MT5Operations mT5Operations, IHubContext<ProfitOutDealHub> hubContext, ILogger<ScalpingDeduction> logger, IProfitDeductionQueue profitDeductionQueue)
     {
         _mT5Operations = mT5Operations;
         _hubContext = hubContext;
         _logger = logger;
         _profitDeductionQueue = profitDeductionQueue;
-        _context = context;
     }
 
     public async Task ProfitDeductionAsync(NewDealDto newDealDto)
@@ -112,7 +110,7 @@ public class ScalpingDeduction
         try
         {
             var diff = outTime - inTime;
-            
+
             if (diff.TotalMinutes >= 3)
             {
                 return;
@@ -125,7 +123,7 @@ public class ScalpingDeduction
                     outDealId, login, profit);
                 return;
             }
-            
+
             var profitDeal = new ProfitOutDeals
             {
                 DealId = outDealId,
@@ -138,9 +136,11 @@ public class ScalpingDeduction
                 PositionID = positionId,
                 OpeningTime = inTime,
                 ProfitOut = profit,
-                Comment = comment
+                Comment = comment ,
+               TimeDifferenceInSeconds = diff.TotalSeconds.ToString()
+                
             };
-            
+ 
             await _profitDeductionQueue.EnqueueAsync(profitDeal);
 
             _logger.LogInformation(
@@ -149,13 +149,13 @@ public class ScalpingDeduction
         }
         catch (OperationCanceledException)
         {
-                        _logger.LogWarning(
-                "Profit deduction enqueue canceled for DealId={DealId}, Login={Login}",
-                outDealId, login);
+            _logger.LogWarning(
+            "Profit deduction enqueue canceled for DealId={DealId}, Login={Login}",
+            outDealId, login);
         }
         catch (Exception ex)
         {
-            
+
             _logger.LogError(
                 ex,
                 "Unexpected error in DeductProfitAsync. DealId={DealId}, Login={Login}, Profit={Profit}",

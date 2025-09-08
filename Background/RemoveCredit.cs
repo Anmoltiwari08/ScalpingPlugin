@@ -9,21 +9,21 @@ public class ProfitDeductionService : BackgroundService
 {
     private readonly IProfitDeductionQueue _queue;
     private readonly IHubContext<ProfitOutDealHub> _hubContext;
-    private readonly AppDbContext _context;
+    private IServiceProvider serviceProvider;
     private readonly ILogger<ProfitDeductionService> _logger;
     private MT5Operations mT5Operations;
 
     public ProfitDeductionService(
         IProfitDeductionQueue queue,
         IHubContext<ProfitOutDealHub> hubContext,
-        AppDbContext context,
+        IServiceProvider serviceProvider,
         ILogger<ProfitDeductionService> logger,
         MT5Operations mT5Operations
         )
     {
         _queue = queue;
         _hubContext = hubContext;
-        _context = context;
+        this.serviceProvider = serviceProvider;
         _logger = logger;
         this.mT5Operations = mT5Operations;
     }
@@ -39,12 +39,13 @@ public class ProfitDeductionService : BackgroundService
     }
 
     private async Task Consume(int consumerId, CancellationToken stoppingToken)
-    {   
+    {   var scope = serviceProvider.CreateScope();
+        var _context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await foreach (var deal in _queue.DequeueAllAsync(stoppingToken))
-        {         
-            try  
+        {
+            try
             {
-                 
+
                 bool exists = await _context.ProfitOutDeals
                     .AnyAsync(d => d.DealId == deal.DealId, stoppingToken);
 

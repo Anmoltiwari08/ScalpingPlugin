@@ -7,17 +7,17 @@ namespace TestScalpingBackend.Models
     {
         public Guid Id { get; set; }
         public double ProfitOut { get; set; }
-        public string TimeDifferenceInSeconds { get; set; }
+        public string TimeDifferenceInSeconds { get; set; } = "";
         public ulong PositionID { get; set; }
         public ulong Login { get; set; }
-        public string Symbol { get; set; }
+        public string Symbol { get; set; } = "";
         public DateTime OpeningTime { get; set; }
         public DateTime ClosingTime { get; set; }
         public ulong DealId { get; set; }
         public uint Entry { get; set; }
         public uint Action { get; set; }
         public double Volume { get; set; }
-        public string Comment { get; set; }
+        public string Comment { get; set; } = "";
     }
 
     public class RequestModel
@@ -58,19 +58,20 @@ namespace TestScalpingBackend.Models
         }
     }
 
-    public class DealDto
-    {
-        public ulong Login { get; set; }
-        public uint Entry { get; set; }
-        public double Profit { get; set; }
-        public double Added { get; set; }
-        public ulong DealId { get; set; }
-        public ulong BalanceOperationDealId { get; set; }
-        public uint Action { get; set; }
-        public long TimeStamp { get; set; }
-        public DateTimeOffset ConvertedTime { get; set; }
-        public DateTimeOffset CurrentLocalTime { get; set; }
-    }
+    // public class DealDto
+    // {
+    //     public ulong Login { get; set; }
+    //     public uint Entry { get; set; }
+    //     public double Profit { get; set; }
+    //     public double Added { get; set; }
+    //     public ulong DealId { get; set; }
+    //     public ulong BalanceOperationDealId { get; set; }
+    //     public uint Action { get; set; }
+    //     public long TimeStamp { get; set; }
+    //     public DateTimeOffset ConvertedTime { get; set; }
+    //     public DateTimeOffset CurrentLocalTime { get; set; }
+    // }
+
 
     public class NewDealDto
     {
