@@ -13,7 +13,6 @@ public class AppDbContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        // Store DateTime as "timestamp without time zone" to allow Unspecified kind
         modelBuilder.Entity<ProfitOutDeals>(entity =>
         {
             entity.Property(e => e.OpeningTime)
@@ -26,9 +25,21 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.CreatedAt)
-                  .HasColumnType("timestamp without time zone");
+                  .HasColumnType("timestamp without time zone")
+                  .HasDefaultValueSql("NOW()"); 
+
+                  
         });
 
-    }
+        modelBuilder.Entity<User>().HasData(
+            new User
+            {
+                Id = 1,
+                Email = "Support@fxsmartbull.com",
+                PasswordHash = "$2y$10$nd4YLMsfFwrLJjVffrEi4uOURDHuZaqB6WCAkoj8oBtT46ROd4shK",
+                
 
+            }
+        );
+    }
 }

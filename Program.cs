@@ -1,3 +1,4 @@
+using Hangfire;
 using TestScalpingBackend.Services;
 using Microsoft.EntityFrameworkCore;
 using DictionaryExample;
@@ -9,6 +10,9 @@ using System.Security.Claims;
 using TestScalpingBackend.Models;
 using TestScalpingBackend.Middleware;
 using WebServicesApi.Middleware;
+using Hangfire.PostgreSql;
+using TestScalpingBackend.Hangfire;
+using TestScalpingBackend.Helper;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -37,6 +41,11 @@ builder.Services.AddSignalR();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+builder.Services.AddHangfire(config =>
+config.UsePostgreSqlStorage(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+builder.Services.AddHangfireServer();
+
 builder.Services.AddSingleton<MT5Connection>();
 builder.Services.AddSingleton<SymbolStore>();
 builder.Services.AddSingleton<DealSubscribe>();
@@ -51,6 +60,9 @@ builder.Services.AddHostedService<ProfitDeductionService>();
 
 builder.Services.AddScoped<JwtAuthorizationFilter>();
 builder.Services.AddScoped<AuthService>();
+
+builder.Services.AddScoped<ScalpingFindHelper>();
+builder.Services.AddScoped<FindScalpingAndRemove>();
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
                   ?? throw new Exception("JWT settings missing");
@@ -140,6 +152,29 @@ app.Services.GetRequiredService<SymbolStore>();
 
 var dealSubscribe = app.Services.GetRequiredService<DealSubscribe>();
 MT5Connection.m_manager.DealSubscribe(dealSubscribe);
+
+app.UseHangfireDashboard("/hangfire");
+
+using (var scope = app.Services.CreateScope())
+{
+    var recurringJobManager = scope.ServiceProvider.GetRequiredService<IRecurringJobManager>();
+    var job = scope.ServiceProvider.GetRequiredService<FindScalpingAndRemove>();
+
+    TimeZoneInfo gmtPlus1;
+
+    if (OperatingSystem.IsWindows())
+        gmtPlus1 = TimeZoneInfo.FindSystemTimeZoneById("Central European Standard Time");
+    else
+        gmtPlus1 = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
+    recurringJobManager.AddOrUpdate(
+    "FindScalpingAndRemoveJob",
+    () => job.Execute(),
+    "0 1 * * *",
+    gmtPlus1
+);
+
+}
 
 app.MapHub<ProfitOutDealHub>("/profitoutdealhub");
 

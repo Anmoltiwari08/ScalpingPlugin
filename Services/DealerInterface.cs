@@ -38,81 +38,80 @@ namespace TestScalpingBackend.Services
             _dealQueue = dealQueue;
         }
 
-        public override async void OnDealAdd(CIMTDeal deal)
-        {
+        // public override async void OnDealAdd(CIMTDeal deal)
+        // {
 
-            ulong positionId = deal.PositionID();
-            uint entry = deal.Entry();
-            uint Action = deal.Action();
-            string Symbol = deal.Symbol();
-            ulong Login = deal.Login();
-            double Profit = deal.Profit();
-            long outdealtime = deal.Time();
-            ulong DealId = deal.Deal();
-            ulong Volume = deal.Volume();
+        //     ulong positionId = deal.PositionID();
+        //     uint entry = deal.Entry();
+        //     uint Action = deal.Action();
+        //     string Symbol = deal.Symbol();
+        //     ulong Login = deal.Login();
+        //     double Profit = deal.Profit();
+        //     long outdealtime = deal.Time();
+        //     ulong DealId = deal.Deal();
+        //     ulong Volume = deal.Volume();
 
-            var model = new NewDealDto()
-            {
-                PositionId = positionId,
-                EntryType = entry,
-                ActionType = Action,
-                Symbol = Symbol,
-                Profit = Profit,
-                Login = Login,
-                Time = DateTimeOffset.FromUnixTimeSeconds(outdealtime).DateTime,
-                DealId = DealId,
-                Volume = Volume
-            };
+        //     var model = new NewDealDto()
+        //     {
+        //         PositionId = positionId,
+        //         EntryType = entry,
+        //         ActionType = Action,
+        //         Symbol = Symbol,
+        //         Profit = Profit,
+        //         Login = Login,
+        //         Time = DateTimeOffset.FromUnixTimeSeconds(outdealtime).DateTime,
+        //         DealId = DealId,
+        //         Volume = Volume
+        //     };
 
-            try
-            {
-                try
-                {
-                    var SymbolExistsInrules = symbolStore.ContainsSymbol(Symbol);
+        //     try
+        //     {
+        //         try
+        //         {
+        //             var SymbolExistsInrules = symbolStore.ContainsSymbol(Symbol);
 
-                    if (entry == 1 && (Action == 0 || Action == 1) && Profit > 0
-                    // && CreditProfit == true && SymbolExistsInrules == true
-                     )
-                    {
+        //             if (entry == 1 && (Action == 0 || Action == 1) && Profit > 0
+        //             && CreditProfit == true && SymbolExistsInrules == true
+        //              )
+        //             {
 
-                        try
-                        {
-                            await _dealQueue.EnqueueAsync(model);
-                        }
-                        catch (Exception ex)
-                        {
-                            var json = JsonSerializer.Serialize(model);
-                            _logger.LogError(ex, "Failed to enqueue deal {Json}", json);
-                        }
+        //                 try
+        //                 {
+        //                     await _dealQueue.EnqueueAsync(model);
+        //                 }
+        //                 catch (Exception ex)
+        //                 {
+        //                     var json = JsonSerializer.Serialize(model);
+        //                     _logger.LogError(ex, "Failed to enqueue deal {Json}", json);
+        //                 }
 
-                    }
+        //             }
 
-                }
-                catch (Exception ex)
-                {
-                    var json = JsonSerializer.Serialize(model);
-                    _logger.LogError(ex,
-                    "Error in processing Deal data {json}", json
-                    );
+        //         }
+        //         catch (Exception ex)
+        //         {
+        //             var json = JsonSerializer.Serialize(model);
+        //             _logger.LogError(ex,
+        //             "Error in processing Deal data {json}", json
+        //             );
 
-                }
+        //         }
 
-            }
-            catch (Exception ex)
-            {
-                var json = JsonSerializer.Serialize(model);
-                _logger.LogError(ex,
-                "Error processing deal data : {json} ", json);
-            }
-            finally
-            {
-                deal?.Release();
-            }
+        //     }
+        //     catch (Exception ex)
+        //     {
+        //         var json = JsonSerializer.Serialize(model);
+        //         _logger.LogError(ex,
+        //         "Error processing deal data : {json} ", json);
+        //     }
+        //     finally
+        //     {
+        //         deal?.Release();
+        //     }
 
-        }
+        // }
 
     }
 
 }
-
 

@@ -6,17 +6,17 @@ namespace TestScalpingBackend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     public class SymbolController : ControllerBase
-    {   
-        
+    {
+
         private readonly SymbolStore _symbolStore;
         private readonly ILogger<SymbolController> _logger;
-
+          
         public SymbolController(SymbolStore symbolStore, ILogger<SymbolController> logger)
         {
             _symbolStore = symbolStore;
             _logger = logger;
         }
-
+        
         [HttpGet("all")]
         public IActionResult GetAllSymbols()
         {
@@ -91,6 +91,6 @@ namespace TestScalpingBackend.Controllers
                 return StatusCode(500, $"Error checking if symbol '{symbolName}' exists");
             }
         }
-
+        
     }
 }
